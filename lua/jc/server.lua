@@ -174,6 +174,10 @@ local function lspconfig_setup(paths)
     "--add-modules=ALL-SYSTEM",
     "--add-opens", "java.base/java.util=ALL-UNNAMED",
     "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+    "--add-opens", "java.base/sun.nio.fs=ALL-UNNAMED",
+    "-Djava.import.generatesMetadataFilesAtProjectRoot=false",
+    "-Dfile.encoding=utf8",
+    "-Dsun.zip.disableMemoryMapping=true",
     "-jar", paths.jdtls.jar,
     "-configuration", paths.jdtls.config,
     "-data", paths.workspace_dir,
@@ -183,17 +187,54 @@ local function lspconfig_setup(paths)
     paths.java_debug,
   }
 
+  local capabilities = vim.lsp.protocol.make_client_capabilities()
+  capabilities.workspace.workspaceEdit.documentChanges = true
+  capabilities.workspace.workspaceEdit.failureHandling = "textOnlyTransactional"
+  capabilities.workspace.workspaceEdit.normalizesLineEndings = true
+  capabilities.workspace.workspaceEdit.changeAnnotationSupport = { groupsOnLabel = true, }
+  capabilities.workspace.didChangeConfiguration = { dynamicRegistration = true, }
+  capabilities.workspace.didChangeWatchedFiles = { dynamicRegistration = true, }
+  capabilities.workspace.executeCommand = { dynamicRegistration = true, }
+  capabilities.workspace.fileOperations = { dynamicRegistration = true,
+                                  didCreate = true,
+                                  didRename = true,
+                                  didDelete = true,
+                                  willCreate = true,
+                                  willRename = true,
+                                  willDelete = true,
+                                }
+  capabilities.textDocument.completion.completionItem.snippetSupport = true
+  capabilities.textDocument.completion.dynamicRegistration = true
+  capabilities.textDocument.rename = {
+                dynamicRegistration = true,
+                prepareSupport = true,
+                prepareSupportDefaultBehavior = 1,
+                honorsChangeAnnotations = true,
+            }
+
   require("lspconfig").jdtls.setup({
     root_dir = function()
       return vim.fn.getcwd()
     end,
     on_attach = M.config.jc_on_attach,
     cmd = cmd,
+    capabilities = capabilities,
     settings = settings,
     init_options = {
       bundles = bundles,
       extendedClientCapabilities = {
         classFileContentsSupport = true,
+        overrideMethodsPromptSupport = true,
+        hashCodeEqualsPromptSupport = true,
+        advancedOrganizeImportsSupport = true,
+        generateToStringPromptSupport = true,
+        advancedGenerateAccessorsSupport = true,
+        generateConstructorsPromptSupport = true,
+        generateDelegateMethodsPromptSupport = true,
+        advancedExtractRefactoringSupport = true,
+        inferSelectionSupport = { "extractMethod", "extractVariable", "extractField" },
+        moveRefactoringSupport = true,
+        advancedIntroduceParameterRefactoringSupport = true,
       },
     },
   })
